@@ -10,7 +10,7 @@ Workouter is a Next.js app for workout users with:
 
 ## Tech stack
 - Next.js App Router (TypeScript)
-- Prisma + SQLite (local development)
+- Prisma + PostgreSQL
 - Cookie-based sessions + hashed passwords (`bcryptjs`)
 
 ## Local setup
@@ -28,9 +28,12 @@ Workouter is a Next.js app for workout users with:
    ```bash
    npx prisma generate
    ```
-4. Initialize local DB schema (already included in `prisma/init.sql`):
+4. Initialize database schema:
+   - For Supabase/Vercel hosted Postgres, run SQL from:
+     - `prisma/postgres-init.sql` (in Supabase SQL Editor)
+   - For command line usage:
    ```bash
-   npx prisma db execute --file prisma/init.sql --schema prisma/schema.prisma
+   npx prisma db execute --file prisma/postgres-init.sql --schema prisma/schema.prisma
    ```
 5. Start development server:
    ```bash
@@ -50,5 +53,5 @@ Workouter is a Next.js app for workout users with:
 
 ## Production note (Vercel)
 Prisma datasource is configured for Postgres. On Vercel, set `POSTGRES_URL` to your database connection string.
-For first deploy (or schema changes), set Build Command to:
+Build Command:
 `npm run vercel-build`
