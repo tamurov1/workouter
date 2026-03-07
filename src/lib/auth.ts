@@ -10,13 +10,23 @@ const SESSION_COOKIE = "workouter_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 function requireSessionSecret() {
-  const secret = process.env.SESSION_SECRET ?? process.env.SUPABASE_SECRET_KEY;
+  const secret =
+    process.env.SESSION_SECRET ??
+    process.env.AUTH_SECRET ??
+    process.env.NEXTAUTH_SECRET ??
+    process.env.SUPABASE_SECRET_KEY;
 
-  if (!secret) {
-    throw new Error("SESSION_SECRET (or SUPABASE_SECRET_KEY fallback) is not configured");
+  if (secret) {
+    return secret;
   }
 
-  return secret;
+  const postgresUrl = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
+
+  if (postgresUrl) {
+    return createHash("sha256").update(postgresUrl).digest("hex");
+  }
+
+  throw new Error("No session secret configured (SESSION_SECRET/AUTH_SECRET/NEXTAUTH_SECRET)");
 }
 
 function hashToken(token: string) {

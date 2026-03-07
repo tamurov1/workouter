@@ -19,10 +19,10 @@ Workouter is a Next.js app for workout users with:
    npm install
    ```
 2. Configure environment:
-   - `.env` already contains:
+  - `.env` already contains:
      - `POSTGRES_URL` (required, Postgres connection string)
      - `POSTGRES_DATABASE`
-     - `SESSION_SECRET` (or `SUPABASE_SECRET_KEY` fallback)
+     - `SESSION_SECRET` (or `AUTH_SECRET` / `NEXTAUTH_SECRET`)
      - Optional `DATABASE_URL` mirror with same Postgres URL
 3. Generate Prisma client:
    ```bash
