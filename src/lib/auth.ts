@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ensureAuthSchema } from "@/lib/ensure-auth-schema";
+import { ensureAppSchema } from "@/lib/ensure-app-schema";
 
 const SESSION_COOKIE = "workouter_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -111,6 +112,12 @@ export async function requireUser() {
 
   if (!user) {
     redirect("/signin");
+  }
+
+  try {
+    await ensureAppSchema();
+  } catch {
+    // Keep route accessible even if extended schema bootstrap is temporarily unavailable.
   }
 
   return user;

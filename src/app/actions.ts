@@ -3,6 +3,7 @@
 import { JoinRequestStatus, UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { ensureAppSchema } from "@/lib/ensure-app-schema";
 import { ensureAuthSchema } from "@/lib/ensure-auth-schema";
 import {
   calculateVolume,
@@ -37,6 +38,8 @@ async function requireOnboardedUser() {
   if (!user.role) {
     redirect("/onboarding");
   }
+
+  await ensureAppSchema();
 
   return user;
 }
