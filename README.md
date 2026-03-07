@@ -20,8 +20,12 @@ Workouter is a Next.js app for workout users with:
    ```
 2. Configure environment:
    - `.env` already contains:
-     - `DATABASE_URL="file:./dev.db"`
+     - `DATABASE_URL="file:./dev2.db"` (local fallback)
      - `SESSION_SECRET="replace-with-a-long-random-secret"`
+     - For Vercel production, set:
+       - `POSTGRES_URL`
+       - `POSTGRES_DATABASE`
+       - `SESSION_SECRET` (or `SUPABASE_SECRET_KEY` fallback)
 3. Generate Prisma client:
    ```bash
    npx prisma generate
@@ -47,4 +51,4 @@ Workouter is a Next.js app for workout users with:
 - `/settings`
 
 ## Production note (Vercel)
-SQLite is fine for local dev, but for Vercel deployment use a hosted database (recommended: Vercel Postgres). Then update `DATABASE_URL` and run migrations against Postgres.
+SQLite is fine for local dev. In production the app reads `POSTGRES_URL` first and falls back to `DATABASE_URL` only if needed.

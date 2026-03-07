@@ -8,10 +8,10 @@ const SESSION_COOKIE = "workouter_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 function requireSessionSecret() {
-  const secret = process.env.SESSION_SECRET;
+  const secret = process.env.SESSION_SECRET ?? process.env.SUPABASE_SECRET_KEY;
 
   if (!secret) {
-    throw new Error("SESSION_SECRET is not configured");
+    throw new Error("SESSION_SECRET (or SUPABASE_SECRET_KEY fallback) is not configured");
   }
 
   return secret;
