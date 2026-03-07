@@ -21,7 +21,6 @@ Workouter is a Next.js app for workout users with:
 2. Configure environment:
    - `.env` already contains:
      - `POSTGRES_URL` (required, Postgres connection string)
-     - `POSTGRES_DIRECT_URL` (required for Prisma schema push/migrations)
      - `POSTGRES_DATABASE`
      - `SESSION_SECRET` (or `SUPABASE_SECRET_KEY` fallback)
      - Optional `DATABASE_URL` mirror with same Postgres URL
@@ -51,6 +50,5 @@ Workouter is a Next.js app for workout users with:
 
 ## Production note (Vercel)
 Prisma datasource is configured for Postgres. On Vercel, set `POSTGRES_URL` to your database connection string.
-For Supabase, use pooled URL (`:6543`) for `POSTGRES_URL` and direct connection URL (`:5432`) for `POSTGRES_DIRECT_URL`.
 For first deploy (or schema changes), set Build Command to:
 `npm run vercel-build`
