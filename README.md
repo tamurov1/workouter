@@ -50,3 +50,5 @@ Workouter is a Next.js app for workout users with:
 
 ## Production note (Vercel)
 Prisma datasource is configured for Postgres. On Vercel, set `POSTGRES_URL` to your database connection string.
+For first deploy (or schema changes), set Build Command to:
+`npm run vercel-build`
