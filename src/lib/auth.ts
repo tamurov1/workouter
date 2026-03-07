@@ -3,6 +3,7 @@ import { compare, hash } from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { ensureAuthSchema } from "@/lib/ensure-auth-schema";
 
 const SESSION_COOKIE = "workouter_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -31,6 +32,8 @@ export async function verifyPassword(password: string, passwordHash: string) {
 }
 
 export async function createSession(userId: string) {
+  await ensureAuthSchema();
+
   const token = randomBytes(32).toString("hex");
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
@@ -54,6 +57,8 @@ export async function createSession(userId: string) {
 }
 
 export async function destroySession() {
+  await ensureAuthSchema();
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
 
@@ -69,6 +74,12 @@ export async function destroySession() {
 }
 
 export async function getCurrentUser() {
+  try {
+    await ensureAuthSchema();
+  } catch {
+    return null;
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
 

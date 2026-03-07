@@ -3,6 +3,7 @@
 import { JoinRequestStatus, UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { ensureAuthSchema } from "@/lib/ensure-auth-schema";
 import {
   calculateVolume,
   estimateE1rm,
@@ -92,6 +93,8 @@ async function syncWorkoutCompletion(workoutId: string, userId: string) {
 }
 
 export async function signUpAction(formData: FormData) {
+  await ensureAuthSchema();
+
   const name = readText(formData, "name");
   const email = readText(formData, "email").toLowerCase();
   const password = readText(formData, "password");
@@ -124,6 +127,8 @@ export async function signUpAction(formData: FormData) {
 }
 
 export async function signInAction(formData: FormData) {
+  await ensureAuthSchema();
+
   const email = readText(formData, "email").toLowerCase();
   const password = readText(formData, "password");
 
@@ -153,6 +158,8 @@ export async function signInAction(formData: FormData) {
 }
 
 export async function selectRoleAction(formData: FormData) {
+  await ensureAuthSchema();
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -175,6 +182,8 @@ export async function selectRoleAction(formData: FormData) {
 }
 
 export async function updateProfileAction(formData: FormData) {
+  await ensureAuthSchema();
+
   const user = await requireOnboardedUser();
 
   const name = readText(formData, "name");
