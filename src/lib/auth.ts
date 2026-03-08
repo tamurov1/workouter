@@ -104,13 +104,11 @@ export async function getCurrentUser() {
   });
 
   if (!session) {
-    cookieStore.delete(SESSION_COOKIE);
     return null;
   }
 
   if (session.expiresAt < new Date()) {
-    await prisma.session.delete({ where: { id: session.id } });
-    cookieStore.delete(SESSION_COOKIE);
+    await prisma.session.deleteMany({ where: { id: session.id } });
     return null;
   }
 
