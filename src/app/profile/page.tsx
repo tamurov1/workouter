@@ -155,6 +155,9 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                     <p className="panel-copy">
                       {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
                     </p>
+                    <p className="profile-bio">
+                      Enter actual RPE once per set. Next set load updates automatically from that value.
+                    </p>
 
                     <div className="exercise-table-wrap">
                       <table className="exercise-table">
@@ -193,21 +196,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                                       max={10}
                                       min={6}
                                       name="actualRpe"
-                                      step="0.5"
-                                      type="number"
-                                    />
-                                    <input
-                                      className="mini-input"
-                                      defaultValue={exercise.reps}
-                                      min={1}
-                                      name="completedReps"
-                                      type="number"
-                                    />
-                                    <input
-                                      className="mini-input"
-                                      defaultValue={exercise.load.toFixed(1)}
-                                      min={0}
-                                      name="loadUsed"
                                       step="0.5"
                                       type="number"
                                     />

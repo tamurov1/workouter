@@ -491,8 +491,6 @@ export async function completeExerciseSetAction(formData: FormData) {
 
   const exerciseId = readText(formData, "exerciseId");
   const actualRpe = Number.parseFloat(readText(formData, "actualRpe"));
-  const completedRepsRaw = readText(formData, "completedReps");
-  const loadUsedRaw = readText(formData, "loadUsed");
 
   const exercise = await prisma.workoutExercise.findUnique({
     where: { id: exerciseId },
@@ -503,11 +501,11 @@ export async function completeExerciseSetAction(formData: FormData) {
     redirect("/profile?error=Exercise%20not%20available.");
   }
 
-  const completedReps = completedRepsRaw ? Number.parseInt(completedRepsRaw, 10) : exercise.reps;
-  const loadUsed = loadUsedRaw ? Number.parseFloat(loadUsedRaw) : exercise.load;
+  const completedReps = exercise.reps;
+  const loadUsed = exercise.load;
 
-  if (Number.isNaN(actualRpe) || Number.isNaN(completedReps) || Number.isNaN(loadUsed) || completedReps < 1 || loadUsed <= 0) {
-    redirect("/profile?error=Provide%20valid%20actual%20RPE,%20reps,%20and%20load.");
+  if (Number.isNaN(actualRpe) || completedReps < 1 || loadUsed <= 0) {
+    redirect("/profile?error=Provide%20a%20valid%20actual%20RPE.");
   }
 
   const actualIntensity = lookupIntensityPercent(completedReps, actualRpe);
