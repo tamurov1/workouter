@@ -11,6 +11,22 @@ type NavItem = {
 };
 
 function getMobileItems(role: UserRole | null): NavItem[] {
+  const settingsItem: NavItem = {
+    href: "/settings",
+    label: "Settings",
+    icon: (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        <path
+          d="M19 12A7 7 0 0 0 19 11L21 9L19 5L16 6A7 7 0 0 0 14 5L13 2H11L10 5A7 7 0 0 0 8 6L5 5L3 9L5 11A7 7 0 0 0 5 13L3 15L5 19L8 18A7 7 0 0 0 10 19L11 22H13L14 19A7 7 0 0 0 16 18L19 19L21 15L19 13A7 7 0 0 0 19 12Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+        />
+      </svg>
+    ),
+  };
+
   const core: NavItem[] = [
     {
       href: "/search",
@@ -44,7 +60,10 @@ function getMobileItems(role: UserRole | null): NavItem[] {
   ];
 
   if (role === "TRAINER") {
-    core.push({
+    return [
+      settingsItem,
+      ...core,
+      {
       href: "/groups",
       label: "Groups",
       icon: (
@@ -52,25 +71,11 @@ function getMobileItems(role: UserRole | null): NavItem[] {
           <path d="M4 8H20M4 12H20M4 16H14" fill="none" stroke="currentColor" strokeWidth="1.8" />
         </svg>
       ),
-    });
-    return core;
+    },
+    ];
   }
 
-  core.push({
-    href: "/settings",
-    label: "Settings",
-    icon: (
-      <svg aria-hidden="true" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
-        <path
-          d="M19 12A7 7 0 0 0 19 11L21 9L19 5L16 6A7 7 0 0 0 14 5L13 2H11L10 5A7 7 0 0 0 8 6L5 5L3 9L5 11A7 7 0 0 0 5 13L3 15L5 19L8 18A7 7 0 0 0 10 19L11 22H13L14 19A7 7 0 0 0 16 18L19 19L21 15L19 13A7 7 0 0 0 19 12Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.4"
-        />
-      </svg>
-    ),
-  });
+  core.push(settingsItem);
 
   return core;
 }

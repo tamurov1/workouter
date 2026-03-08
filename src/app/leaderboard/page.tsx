@@ -10,6 +10,8 @@ export default async function LeaderboardPage() {
     redirect("/onboarding");
   }
 
+  const roleFilter = user.role;
+
   const topUsers = await prisma.user.findMany({
     select: {
       id: true,
@@ -17,16 +19,25 @@ export default async function LeaderboardPage() {
       role: true,
       points: true,
     },
+    where: {
+      role: roleFilter,
+    },
     orderBy: [{ points: "desc" }, { createdAt: "asc" }],
     take: 15,
   });
+
+  const title = user.role === "TRAINER" ? "Trainer Leaderboard" : "Trainee Leaderboard";
+  const subtitle =
+    user.role === "TRAINER"
+      ? "Ranking of trainers by points."
+      : "Ranking of trainees by points.";
 
   return (
     <DashboardShell>
       <section className="panel profile-panel">
         <p className="eyebrow">Leaderboard</p>
-        <h1 className="panel-title">Top Performers</h1>
-        <p className="panel-copy">Ranking sorted by points.</p>
+        <h1 className="panel-title">{title}</h1>
+        <p className="panel-copy">{subtitle}</p>
 
         <div className="leaderboard-list">
           {topUsers.map((entry, index) => (
