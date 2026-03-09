@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createWorkoutAction } from "@/app/actions";
+import { createWorkoutAction, saveWorkoutTemplateAction } from "@/app/actions";
 
 type TraineeOption = {
   id: string;
@@ -26,6 +26,27 @@ type ExerciseBlock = {
 type WorkoutPlanFormProps = {
   groupId: string;
   trainees: TraineeOption[];
+  templates: WorkoutTemplateOption[];
+};
+
+type WorkoutTemplateExerciseOption = {
+  id: string;
+  name: string;
+  setNumber: number;
+  sets: number;
+  reps: number;
+  rpe: number;
+  load: number;
+  explicitIntensity: number | null;
+  sortOrder: number;
+};
+
+type WorkoutTemplateOption = {
+  id: string;
+  name: string;
+  title: string;
+  dayLabel: string;
+  exercises: WorkoutTemplateExerciseOption[];
 };
 
 function createSetRow(seed: number): SetRow {
@@ -68,7 +89,12 @@ function syncRowsCount(rows: SetRow[], setsCount: number, seedBase: number) {
   return next;
 }
 
-export function WorkoutPlanForm({ groupId, trainees }: WorkoutPlanFormProps) {
+export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFormProps) {
+  const [title, setTitle] = useState("");
+  const [dayLabel, setDayLabel] = useState("");
+  const [templateName, setTemplateName] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "");
+  const [showTemplates, setShowTemplates] = useState(false);
   const [blocks, setBlocks] = useState<ExerciseBlock[]>([createExerciseBlock(1)]);
 
   const addExercise = () => {
@@ -117,6 +143,55 @@ export function WorkoutPlanForm({ groupId, trainees }: WorkoutPlanFormProps) {
     );
   };
 
+  const applyTemplate = () => {
+    const template = templates.find((entry) => entry.id === selectedTemplateId);
+
+    if (!template) {
+      return;
+    }
+
+    setTitle(template.title);
+    setDayLabel(template.dayLabel);
+
+    const grouped = template.exercises.reduce<Array<{
+      name: string;
+      sets: number;
+      rows: WorkoutTemplateExerciseOption[];
+    }>>((accumulator, exercise) => {
+      const existing = accumulator.find((item) => item.name === exercise.name);
+
+      if (existing) {
+        existing.rows.push(exercise);
+        return accumulator;
+      }
+
+      accumulator.push({
+        name: exercise.name,
+        sets: exercise.sets,
+        rows: [exercise],
+      });
+      return accumulator;
+    }, []);
+
+    const mappedBlocks = grouped.map((group, blockIndex) => {
+      const sortedRows = [...group.rows].sort((a, b) => a.sortOrder - b.sortOrder);
+      return {
+        id: `template-exercise-${blockIndex + 1}`,
+        name: group.name,
+        sets: String(group.sets),
+        rows: sortedRows.map((row, rowIndex) => ({
+          id: `template-set-${blockIndex + 1}-${rowIndex + 1}`,
+          reps: String(row.reps),
+          load: String(row.load),
+          targetRpe: String(row.rpe),
+          optionalIntensity: row.explicitIntensity === null ? "" : String(row.explicitIntensity),
+        })),
+      };
+    });
+
+    setBlocks(mappedBlocks.length ? mappedBlocks : [createExerciseBlock(1)]);
+  };
+
   if (!trainees.length) {
     return <p className="panel-copy">No trainees in this group yet.</p>;
   }
@@ -124,6 +199,58 @@ export function WorkoutPlanForm({ groupId, trainees }: WorkoutPlanFormProps) {
   return (
     <form action={createWorkoutAction} className="form-stack">
       <input name="groupId" type="hidden" value={groupId} />
+      <div className="form-head-row">
+        <p className="field-label">Create Workout</p>
+        <button className="secondary-button" onClick={() => setShowTemplates((current) => !current)} type="button">
+          Templates
+        </button>
+      </div>
+
+      {showTemplates ? (
+        <div className="template-panel">
+          <label className="field-label" htmlFor={`template-select-${groupId}`}>
+            Saved Templates
+          </label>
+          <div className="template-row">
+            <select
+              className="field-input select-input"
+              id={`template-select-${groupId}`}
+              onChange={(event) => setSelectedTemplateId(event.target.value)}
+              value={selectedTemplateId}
+            >
+              {templates.length ? (
+                templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))
+              ) : (
+                <option value="">No templates yet</option>
+              )}
+            </select>
+            <button className="secondary-button" disabled={!templates.length} onClick={applyTemplate} type="button">
+              Apply
+            </button>
+          </div>
+
+          <label className="field-label" htmlFor={`template-name-${groupId}`}>
+            Save Current As
+          </label>
+          <div className="template-row">
+            <input
+              className="field-input"
+              id={`template-name-${groupId}`}
+              name="templateName"
+              onChange={(event) => setTemplateName(event.target.value)}
+              placeholder="Upper Body Hypertrophy"
+              value={templateName}
+            />
+            <button className="secondary-button" formAction={saveWorkoutTemplateAction} formNoValidate type="submit">
+              Save Template
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <label className="field-label" htmlFor={`trainee-${groupId}`}>
         Trainee
@@ -147,14 +274,32 @@ export function WorkoutPlanForm({ groupId, trainees }: WorkoutPlanFormProps) {
           <label className="field-label" htmlFor={`title-${groupId}`}>
             Workout Title
           </label>
-          <input className="field-input" id={`title-${groupId}`} name="title" placeholder="Push Day" required type="text" />
+          <input
+            className="field-input"
+            id={`title-${groupId}`}
+            name="title"
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Push Day"
+            required
+            type="text"
+            value={title}
+          />
         </div>
 
         <div>
           <label className="field-label" htmlFor={`day-${groupId}`}>
             Day Label
           </label>
-          <input className="field-input" id={`day-${groupId}`} name="dayLabel" placeholder="Monday" required type="text" />
+          <input
+            className="field-input"
+            id={`day-${groupId}`}
+            name="dayLabel"
+            onChange={(event) => setDayLabel(event.target.value)}
+            placeholder="Monday"
+            required
+            type="text"
+            value={dayLabel}
+          />
         </div>
       </div>
 

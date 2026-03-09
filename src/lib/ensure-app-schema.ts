@@ -98,6 +98,37 @@ CREATE TABLE IF NOT EXISTS "public"."WorkoutCompletion" (
 );
   `);
 
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "public"."WorkoutTemplate" (
+  "id" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "title" TEXT NOT NULL,
+  "dayLabel" TEXT NOT NULL,
+  "trainerId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "WorkoutTemplate_pkey" PRIMARY KEY ("id")
+);
+  `);
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "public"."WorkoutTemplateExercise" (
+  "id" TEXT NOT NULL,
+  "templateId" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "setNumber" INTEGER NOT NULL DEFAULT 1,
+  "sets" INTEGER NOT NULL,
+  "reps" INTEGER NOT NULL,
+  "rpe" DOUBLE PRECISION NOT NULL,
+  "load" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  "explicitIntensity" DOUBLE PRECISION,
+  "intensity" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  "volume" INTEGER NOT NULL,
+  "sortOrder" INTEGER NOT NULL,
+  CONSTRAINT "WorkoutTemplateExercise_pkey" PRIMARY KEY ("id")
+);
+  `);
+
   const indexes = [
     'CREATE INDEX IF NOT EXISTS "Group_trainerId_idx" ON "public"."Group"("trainerId");',
     'CREATE INDEX IF NOT EXISTS "GroupMember_groupId_idx" ON "public"."GroupMember"("groupId");',
@@ -111,6 +142,9 @@ CREATE TABLE IF NOT EXISTS "public"."WorkoutCompletion" (
     'CREATE INDEX IF NOT EXISTS "WorkoutExercise_workoutId_name_sortOrder_idx" ON "public"."WorkoutExercise"("workoutId", "name", "sortOrder");',
     'CREATE INDEX IF NOT EXISTS "WorkoutCompletion_userId_completedAt_idx" ON "public"."WorkoutCompletion"("userId", "completedAt");',
     'CREATE UNIQUE INDEX IF NOT EXISTS "WorkoutCompletion_workoutId_userId_key" ON "public"."WorkoutCompletion"("workoutId", "userId");',
+    'CREATE INDEX IF NOT EXISTS "WorkoutTemplate_trainerId_createdAt_idx" ON "public"."WorkoutTemplate"("trainerId", "createdAt");',
+    'CREATE INDEX IF NOT EXISTS "WorkoutTemplateExercise_templateId_sortOrder_idx" ON "public"."WorkoutTemplateExercise"("templateId", "sortOrder");',
+    'CREATE INDEX IF NOT EXISTS "WorkoutTemplateExercise_templateId_name_sortOrder_idx" ON "public"."WorkoutTemplateExercise"("templateId", "name", "sortOrder");',
   ];
 
   for (const sql of indexes) {
@@ -177,6 +211,16 @@ CREATE TABLE IF NOT EXISTS "public"."WorkoutCompletion" (
       name: "WorkoutCompletion_userId_fkey",
       table: "WorkoutCompletion",
       sql: `ALTER TABLE "public"."WorkoutCompletion" ADD CONSTRAINT "WorkoutCompletion_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
+    },
+    {
+      name: "WorkoutTemplate_trainerId_fkey",
+      table: "WorkoutTemplate",
+      sql: `ALTER TABLE "public"."WorkoutTemplate" ADD CONSTRAINT "WorkoutTemplate_trainerId_fkey" FOREIGN KEY ("trainerId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
+    },
+    {
+      name: "WorkoutTemplateExercise_templateId_fkey",
+      table: "WorkoutTemplateExercise",
+      sql: `ALTER TABLE "public"."WorkoutTemplateExercise" ADD CONSTRAINT "WorkoutTemplateExercise_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "public"."WorkoutTemplate"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
     },
   ];
 

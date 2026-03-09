@@ -34,6 +34,7 @@ model User {
   groupJoinRequests    GroupJoinRequest[]
   assignedWorkouts     Workout[]          @relation("AssignedWorkouts")
   createdWorkouts      Workout[]          @relation("CreatedWorkouts")
+  workoutTemplates     WorkoutTemplate[]
   completedExercises   WorkoutExercise[]  @relation("CompletedExercises")
   completedWorkoutLogs WorkoutCompletion[]
   createdAt            DateTime           @default(now())
@@ -150,4 +151,37 @@ model WorkoutCompletion {
 
   @@unique([workoutId, userId])
   @@index([userId, completedAt])
+}
+
+model WorkoutTemplate {
+  id          String                    @id @default(cuid())
+  name        String
+  title       String
+  dayLabel    String
+  trainerId   String
+  trainer     User                      @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  exercises   WorkoutTemplateExercise[]
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@index([trainerId, createdAt])
+}
+
+model WorkoutTemplateExercise {
+  id            String            @id @default(cuid())
+  templateId    String
+  name          String
+  setNumber     Int               @default(1)
+  sets          Int
+  reps          Int
+  rpe           Float
+  load          Float             @default(0)
+  explicitIntensity Float?
+  intensity     Float             @default(0)
+  volume        Int
+  sortOrder     Int
+  template      WorkoutTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, sortOrder])
+  @@index([templateId, name, sortOrder])
 }

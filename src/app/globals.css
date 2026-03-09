@@ -232,6 +232,26 @@ a {
   overflow-x: auto;
 }
 
+.exercise-group-list {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.exercise-group-card {
+  border: 1px solid var(--border);
+  background: rgb(237 240 245 / 52%);
+  padding: 0.6rem;
+}
+
+.exercise-group-title {
+  margin: 0;
+  font: 700 0.74rem/1 var(--font-space-mono), monospace;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #3f4650;
+}
+
 .exercise-table {
   width: 100%;
   border-collapse: collapse;
@@ -444,6 +464,27 @@ a {
   margin-top: 1.4rem;
 }
 
+.form-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.template-panel {
+  border: 1px solid var(--border);
+  background: rgb(237 240 245 / 52%);
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.template-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+}
+
 .field-label {
   font: 700 0.72rem/1 var(--font-space-mono), monospace;
   text-transform: uppercase;
@@ -636,6 +677,10 @@ a {
   }
 
   .plan-grid-two {
+    grid-template-columns: 1fr;
+  }
+
+  .template-row {
     grid-template-columns: 1fr;
   }
 

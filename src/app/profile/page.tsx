@@ -12,6 +12,10 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-CA").format(value);
+}
+
 type ProfilePageProps = {
   searchParams: Promise<{ error?: string; saved?: string }>;
 };
@@ -97,6 +101,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 name: true,
               },
             },
+            exercises: {
+              select: {
+                volume: true,
+              },
+            },
             completions: true,
           },
           orderBy: { deadline: "asc" },
@@ -145,84 +154,112 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             {traineeWorkouts.length ? (
               traineeWorkouts.map((workout) => {
                 const done = workout.completions.length > 0;
+                const totalVolume = workout.exercises.reduce((sum, exercise) => sum + exercise.volume, 0);
+                const exerciseGroups = workout.exercises.reduce<
+                  Array<{
+                    name: string;
+                    rows: Array<(typeof workout.exercises)[number]>;
+                  }>
+                >((accumulator, exercise) => {
+                  const existing = accumulator.find((entry) => entry.name === exercise.name);
+
+                  if (existing) {
+                    existing.rows.push(exercise);
+                    return accumulator;
+                  }
+
+                  accumulator.push({
+                    name: exercise.name,
+                    rows: [exercise],
+                  });
+
+                  return accumulator;
+                }, []);
 
                 return (
                   <article className="workout-card" key={workout.id}>
                     <div className="workout-meta-line">
                       <h2 className="workout-title">{workout.title}</h2>
-                      <span className="workout-status">{done ? "Done" : "In progress"}</span>
+                      <span className="workout-status">{done ? "Done" : "Not done"}</span>
                     </div>
                     <p className="panel-copy">
                       {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
                     </p>
+                    <p className="profile-bio">Status: {done ? "Done" : "Not done"}</p>
+                    <p className="profile-bio">Total volume: {formatNumber(totalVolume)}</p>
                     <p className="profile-bio">
                       Enter actual RPE once per set. Next set load updates automatically from that value.
                     </p>
 
-                    <div className="exercise-table-wrap">
-                      <table className="exercise-table">
-                        <thead>
-                          <tr>
-                            <th>Exercise</th>
-                            <th>Set</th>
-                            <th>Reps</th>
-                            <th>Load</th>
-                            <th>Target RPE</th>
-                            <th>Actual RPE</th>
-                            <th>Intensity %</th>
-                            <th>Volume</th>
-                            <th>Done</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {workout.exercises.map((exercise) => (
-                            <tr key={exercise.id}>
-                              <td>{exercise.name}</td>
-                              <td>
-                                {exercise.setNumber}/{exercise.sets}
-                              </td>
-                              <td>{exercise.reps}</td>
-                              <td>{exercise.load.toFixed(1)}</td>
-                              <td>{exercise.rpe.toFixed(1)}</td>
-                              <td>
-                                {exercise.isCompleted ? (
-                                  exercise.actualRpe?.toFixed(1)
-                                ) : (
-                                  <form action={completeExerciseSetAction} className="exercise-inline-form">
-                                    <input name="exerciseId" type="hidden" value={exercise.id} />
-                                    <input
-                                      className="mini-input"
-                                      defaultValue={exercise.rpe.toFixed(1)}
-                                      max={10}
-                                      min={6}
-                                      name="actualRpe"
-                                      step="0.5"
-                                      type="number"
-                                    />
-                                    <button className="mini-check" type="submit">
-                                      Save
-                                    </button>
-                                  </form>
-                                )}
-                              </td>
-                              <td>{exercise.intensity ? exercise.intensity.toFixed(1) : "-"}</td>
-                              <td>{exercise.volume}</td>
-                              <td>
-                                {exercise.isCompleted ? (
-                                  <form action={resetExerciseSetAction}>
-                                    <input name="exerciseId" type="hidden" value={exercise.id} />
-                                    <button className="mini-check" type="submit">
-                                      Undo
-                                    </button>
-                                  </form>
-                                ) : (
-                                  "No"
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="exercise-group-list">
+                      {exerciseGroups.map((group) => (
+                        <section className="exercise-group-card" key={`${workout.id}-${group.name}`}>
+                          <h3 className="exercise-group-title">{group.name}</h3>
+                          <div className="exercise-table-wrap">
+                            <table className="exercise-table">
+                              <thead>
+                                <tr>
+                                  <th>Set</th>
+                                  <th>Reps</th>
+                                  <th>Load</th>
+                                  <th>Target RPE</th>
+                                  <th>Actual RPE</th>
+                                  <th>Intensity %</th>
+                                  <th>Volume</th>
+                                  <th>Done</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.rows.map((exercise) => (
+                                  <tr key={exercise.id}>
+                                    <td>
+                                      {exercise.setNumber}/{exercise.sets}
+                                    </td>
+                                    <td>{exercise.reps}</td>
+                                    <td>{exercise.load.toFixed(1)}</td>
+                                    <td>{exercise.rpe.toFixed(1)}</td>
+                                    <td>
+                                      {exercise.isCompleted ? (
+                                        exercise.actualRpe?.toFixed(1)
+                                      ) : (
+                                        <form action={completeExerciseSetAction} className="exercise-inline-form">
+                                          <input name="exerciseId" type="hidden" value={exercise.id} />
+                                          <input
+                                            className="mini-input"
+                                            defaultValue={exercise.rpe.toFixed(1)}
+                                            max={10}
+                                            min={6}
+                                            name="actualRpe"
+                                            step="0.5"
+                                            type="number"
+                                          />
+                                          <button className="mini-check" type="submit">
+                                            Save
+                                          </button>
+                                        </form>
+                                      )}
+                                    </td>
+                                    <td>{exercise.intensity ? exercise.intensity.toFixed(1) : "-"}</td>
+                                    <td>{exercise.volume}</td>
+                                    <td>
+                                      {exercise.isCompleted ? (
+                                        <form action={resetExerciseSetAction}>
+                                          <input name="exerciseId" type="hidden" value={exercise.id} />
+                                          <button className="mini-check" type="submit">
+                                            Undo
+                                          </button>
+                                        </form>
+                                      ) : (
+                                        "No"
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </section>
+                      ))}
                     </div>
                   </article>
                 );
@@ -236,16 +273,19 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             {trainerWorkouts.length ? (
               trainerWorkouts.map((workout) => {
                 const done = workout.completions.length > 0;
+                const totalVolume = workout.exercises.reduce((sum, exercise) => sum + exercise.volume, 0);
 
                 return (
                   <article className="workout-card" key={workout.id}>
                     <div className="workout-meta-line">
                       <h2 className="workout-title">{workout.title}</h2>
-                      <span className="workout-status">{done ? "Completed" : "In progress"}</span>
+                      <span className="workout-status">{done ? "Done" : "Not done"}</span>
                     </div>
                     <p className="panel-copy">
                       {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Trainee: {workout.trainee.name}
                     </p>
+                    <p className="profile-bio">Status: {done ? "Done" : "Not done"}</p>
+                    <p className="profile-bio">Total volume: {formatNumber(totalVolume)}</p>
                     <p className="profile-bio">Group: {workout.group.name}</p>
                   </article>
                 );

@@ -6,6 +6,7 @@ import {
 import { DashboardShell } from "@/components/dashboard-shell";
 import { WorkoutPlanForm } from "@/components/workout-plan-form";
 import { requireUser } from "@/lib/auth";
+import { ensureAppSchema } from "@/lib/ensure-app-schema";
 import { prisma } from "@/lib/prisma";
 
 type GroupsPageProps = {
@@ -14,6 +15,7 @@ type GroupsPageProps = {
 
 export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const user = await requireUser();
+  await ensureAppSchema();
 
   if (!user.role) {
     redirect("/onboarding");
@@ -22,7 +24,8 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const params = await searchParams;
 
   if (user.role === "TRAINER") {
-    const groups = await prisma.group.findMany({
+    const [groups, templates] = await Promise.all([
+      prisma.group.findMany({
       where: { trainerId: user.id },
       include: {
         memberships: {
@@ -51,7 +54,17 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
         },
       },
       orderBy: { createdAt: "desc" },
-    });
+      }),
+      prisma.workoutTemplate.findMany({
+        where: { trainerId: user.id },
+        include: {
+          exercises: {
+            orderBy: { sortOrder: "asc" },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     return (
       <DashboardShell>
@@ -125,8 +138,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                   </div>
 
                   <div className="sub-block">
-                    <p className="field-label">Assign Workout</p>
-                    <WorkoutPlanForm groupId={group.id} trainees={trainees} />
+                    <WorkoutPlanForm groupId={group.id} templates={templates} trainees={trainees} />
                   </div>
                 </article>
               );

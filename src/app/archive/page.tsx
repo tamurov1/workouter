@@ -11,6 +11,10 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-CA").format(value);
+}
+
 export default async function ArchivePage() {
   const user = await requireUser();
 
@@ -61,6 +65,9 @@ export default async function ArchivePage() {
         completions: {
           where: { userId: user.id },
         },
+        exercises: {
+          select: { volume: true },
+        },
       },
       orderBy: { deadline: "desc" },
     });
@@ -74,16 +81,17 @@ export default async function ArchivePage() {
 
           <div className="workout-grid">
             {workouts.length ? (
-              workouts.map((workout) => (
-                <article className="workout-card" key={workout.id}>
-                  <h2 className="workout-title">{workout.title}</h2>
-                  <p className="panel-copy">
-                    {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
-                  </p>
-                  <p className="profile-bio">
-                    Status: {workout.completions.length > 0 ? "Done" : "Not marked done"}
-                  </p>
-                </article>
+            workouts.map((workout) => (
+              <article className="workout-card" key={workout.id}>
+                <h2 className="workout-title">{workout.title}</h2>
+                <p className="panel-copy">
+                  {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
+                </p>
+                <p className="profile-bio">Status: {workout.completions.length > 0 ? "Done" : "Not done"}</p>
+                <p className="profile-bio">
+                  Total volume: {formatNumber(workout.exercises.reduce((sum, exercise) => sum + exercise.volume, 0))}
+                </p>
+              </article>
               ))
             ) : (
               <p className="panel-copy">Archive is empty.</p>
@@ -106,6 +114,10 @@ export default async function ArchivePage() {
       group: {
         select: { name: true },
       },
+      completions: true,
+      exercises: {
+        select: { volume: true },
+      },
     },
     orderBy: { deadline: "desc" },
   });
@@ -124,6 +136,10 @@ export default async function ArchivePage() {
                 <h2 className="workout-title">{workout.title}</h2>
                 <p className="panel-copy">
                   {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
+                </p>
+                <p className="profile-bio">Status: {workout.completions.length > 0 ? "Done" : "Not done"}</p>
+                <p className="profile-bio">
+                  Total volume: {formatNumber(workout.exercises.reduce((sum, exercise) => sum + exercise.volume, 0))}
                 </p>
                 <p className="profile-bio">Trainee: {workout.trainee.name}</p>
               </article>

@@ -482,6 +482,56 @@ export async function createWorkoutAction(formData: FormData) {
   redirect("/groups?saved=workout");
 }
 
+export async function saveWorkoutTemplateAction(formData: FormData) {
+  const user = await requireOnboardedUser();
+
+  if (user.role !== "TRAINER") {
+    redirect("/groups?error=Only%20trainers%20can%20save%20templates.");
+  }
+
+  const templateName = readText(formData, "templateName");
+  const title = readText(formData, "title");
+  const dayLabel = readText(formData, "dayLabel");
+  const parsedExercises = parseExercisesFromForm(formData);
+
+  if (!templateName) {
+    redirect("/groups?error=Template%20name%20is%20required.");
+  }
+
+  if (!title || !dayLabel) {
+    redirect("/groups?error=Workout%20title%20and%20day%20label%20are%20required%20to%20save%20a%20template.");
+  }
+
+  if (!parsedExercises.length) {
+    redirect("/groups?error=Provide%20valid%20exercise%20rows%20before%20saving%20a%20template.");
+  }
+
+  await prisma.workoutTemplate.create({
+    data: {
+      name: templateName,
+      title,
+      dayLabel,
+      trainerId: user.id,
+      exercises: {
+        create: parsedExercises.map((exercise) => ({
+          name: exercise.name,
+          setNumber: exercise.setNumber,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          rpe: exercise.rpe,
+          load: exercise.load,
+          explicitIntensity: exercise.explicitIntensity,
+          intensity: exercise.intensity,
+          volume: exercise.volume,
+          sortOrder: exercise.sortOrder,
+        })),
+      },
+    },
+  });
+
+  redirect("/groups?saved=template");
+}
+
 export async function completeExerciseSetAction(formData: FormData) {
   const user = await requireOnboardedUser();
 
