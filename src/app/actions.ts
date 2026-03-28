@@ -18,6 +18,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "@/lib/auth";
+import { parseDeadlineInput } from "@/lib/deadline";
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -435,9 +436,10 @@ export async function createWorkoutAction(formData: FormData) {
   const groupId = readText(formData, "groupId");
   const traineeId = readText(formData, "traineeId");
   const title = readText(formData, "title");
+  const description = readText(formData, "description");
   const dayLabel = readText(formData, "dayLabel");
   const deadlineRaw = readText(formData, "deadline");
-  const deadline = new Date(deadlineRaw);
+  const deadline = parseDeadlineInput(deadlineRaw);
   const parsedExercises = parseExercisesFromForm(formData);
 
   if (!groupId || !traineeId || !title || !dayLabel || Number.isNaN(deadline.getTime())) {
@@ -468,6 +470,7 @@ export async function createWorkoutAction(formData: FormData) {
   await prisma.workout.create({
     data: {
       title,
+      description,
       dayLabel,
       deadline,
       groupId,
@@ -482,6 +485,106 @@ export async function createWorkoutAction(formData: FormData) {
   redirect("/groups?saved=workout");
 }
 
+export async function updateWorkoutAction(formData: FormData) {
+  const user = await requireOnboardedUser();
+
+  if (user.role !== "TRAINER") {
+    redirect("/groups?error=Only%20trainers%20can%20update%20workouts.");
+  }
+
+  const workoutId = readText(formData, "workoutId");
+  const groupId = readText(formData, "groupId");
+  const traineeId = readText(formData, "traineeId");
+  const title = readText(formData, "title");
+  const description = readText(formData, "description");
+  const dayLabel = readText(formData, "dayLabel");
+  const deadlineRaw = readText(formData, "deadline");
+  const deadline = parseDeadlineInput(deadlineRaw);
+  const parsedExercises = parseExercisesFromForm(formData);
+  const trainerEditPath = traineeId ? `/profile/${traineeId}` : "/groups";
+
+  if (!workoutId || !groupId || !traineeId || !title || !dayLabel || Number.isNaN(deadline.getTime())) {
+    redirect(`${trainerEditPath}?error=Invalid%20workout%20inputs.`);
+  }
+
+  if (!parsedExercises.length) {
+    redirect(
+      `${trainerEditPath}?error=Provide%20valid%20exercise%20rows%20with%20name,%20sets,%20reps,%20load,%20targetRpe.`,
+    );
+  }
+
+  const [membership, workout] = await Promise.all([
+    prisma.groupMember.findUnique({
+      where: {
+        userId_groupId: {
+          userId: traineeId,
+          groupId,
+        },
+      },
+      include: {
+        group: true,
+        user: true,
+      },
+    }),
+    prisma.workout.findUnique({
+      where: { id: workoutId },
+      include: {
+        completions: true,
+      },
+    }),
+  ]);
+
+  if (!membership || membership.group.trainerId !== user.id || membership.user.role !== "TRAINEE") {
+    redirect(`${trainerEditPath}?error=Trainee%20is%20not%20in%20your%20group.`);
+  }
+
+  if (!workout || workout.trainerId !== user.id || workout.isArchived) {
+    redirect(`${trainerEditPath}?error=Workout%20not%20available.`);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (workout.completions.length) {
+      await tx.workoutCompletion.deleteMany({
+        where: { workoutId: workout.id },
+      });
+
+      await tx.user.updateMany({
+        where: {
+          id: {
+            in: workout.completions.map((completion) => completion.userId),
+          },
+        },
+        data: {
+          points: {
+            decrement: 10,
+          },
+        },
+      });
+    }
+
+    await tx.workoutExercise.deleteMany({
+      where: { workoutId: workout.id },
+    });
+
+    await tx.workout.update({
+      where: { id: workout.id },
+      data: {
+        title,
+        description,
+        dayLabel,
+        deadline,
+        groupId,
+        traineeId,
+        exercises: {
+          create: parsedExercises,
+        },
+      },
+    });
+  });
+
+  redirect(`/profile/${traineeId}?saved=workout`);
+}
+
 export async function saveWorkoutTemplateAction(formData: FormData) {
   const user = await requireOnboardedUser();
 
@@ -491,6 +594,7 @@ export async function saveWorkoutTemplateAction(formData: FormData) {
 
   const templateName = readText(formData, "templateName");
   const title = readText(formData, "title");
+  const description = readText(formData, "description");
   const dayLabel = readText(formData, "dayLabel");
   const parsedExercises = parseExercisesFromForm(formData);
 
@@ -510,6 +614,7 @@ export async function saveWorkoutTemplateAction(formData: FormData) {
     data: {
       name: templateName,
       title,
+      description,
       dayLabel,
       trainerId: user.id,
       exercises: {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createWorkoutAction, saveWorkoutTemplateAction } from "@/app/actions";
+import { createWorkoutAction, saveWorkoutTemplateAction, updateWorkoutAction } from "@/app/actions";
 
 type TraineeOption = {
   id: string;
@@ -27,6 +27,14 @@ type WorkoutPlanFormProps = {
   groupId: string;
   trainees: TraineeOption[];
   templates: WorkoutTemplateOption[];
+  mode?: "create" | "edit";
+  workoutId?: string;
+  fixedTraineeId?: string;
+  initialTitle?: string;
+  initialDescription?: string;
+  initialDayLabel?: string;
+  initialDeadline?: string;
+  initialBlocks?: ExerciseBlock[];
 };
 
 type WorkoutTemplateExerciseOption = {
@@ -45,6 +53,7 @@ type WorkoutTemplateOption = {
   id: string;
   name: string;
   title: string;
+  description: string;
   dayLabel: string;
   exercises: WorkoutTemplateExerciseOption[];
 };
@@ -89,13 +98,34 @@ function syncRowsCount(rows: SetRow[], setsCount: number, seedBase: number) {
   return next;
 }
 
-export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFormProps) {
-  const [title, setTitle] = useState("");
-  const [dayLabel, setDayLabel] = useState("");
+function getInitialBlocks(blocks?: ExerciseBlock[]) {
+  return blocks?.length ? blocks : [createExerciseBlock(1)];
+}
+
+export function WorkoutPlanForm({
+  groupId,
+  trainees,
+  templates,
+  mode = "create",
+  workoutId,
+  fixedTraineeId,
+  initialTitle = "",
+  initialDescription = "",
+  initialDayLabel = "",
+  initialDeadline = "",
+  initialBlocks,
+}: WorkoutPlanFormProps) {
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+  const [dayLabel, setDayLabel] = useState(initialDayLabel);
   const [templateName, setTemplateName] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id ?? "");
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [blocks, setBlocks] = useState<ExerciseBlock[]>([createExerciseBlock(1)]);
+  const [showTemplates, setShowTemplates] = useState(mode === "edit");
+  const [blocks, setBlocks] = useState<ExerciseBlock[]>(getInitialBlocks(initialBlocks));
+
+  const submitAction = mode === "edit" ? updateWorkoutAction : createWorkoutAction;
+  const submitLabel = mode === "edit" ? "Update Workout" : "Assign Workout";
+  const titleLabel = mode === "edit" ? "Edit Workout" : "Create Workout";
 
   const addExercise = () => {
     setBlocks((current) => [...current, createExerciseBlock(current.length + 1)]);
@@ -151,6 +181,7 @@ export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFor
     }
 
     setTitle(template.title);
+    setDescription(template.description);
     setDayLabel(template.dayLabel);
 
     const grouped = template.exercises.reduce<Array<{
@@ -197,10 +228,11 @@ export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFor
   }
 
   return (
-    <form action={createWorkoutAction} className="form-stack">
+    <form action={submitAction} className="form-stack">
       <input name="groupId" type="hidden" value={groupId} />
+      {mode === "edit" ? <input name="workoutId" type="hidden" value={workoutId} /> : null}
       <div className="form-head-row">
-        <p className="field-label">Create Workout</p>
+        <p className="field-label">{titleLabel}</p>
         <button className="secondary-button" onClick={() => setShowTemplates((current) => !current)} type="button">
           Templates
         </button>
@@ -257,9 +289,10 @@ export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFor
       </label>
       <select
         className="field-input select-input"
-        defaultValue={trainees[0]?.id ?? ""}
+        defaultValue={fixedTraineeId ?? trainees[0]?.id ?? ""}
         id={`trainee-${groupId}`}
         name="traineeId"
+        disabled={Boolean(fixedTraineeId)}
         required
       >
         {trainees.map((trainee) => (
@@ -268,6 +301,7 @@ export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFor
           </option>
         ))}
       </select>
+      {fixedTraineeId ? <input name="traineeId" type="hidden" value={fixedTraineeId} /> : null}
 
       <div className="plan-grid-two">
         <div>
@@ -283,6 +317,21 @@ export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFor
             required
             type="text"
             value={title}
+          />
+        </div>
+
+        <div>
+          <label className="field-label" htmlFor={`description-${groupId}`}>
+            Description
+          </label>
+          <input
+            className="field-input"
+            id={`description-${groupId}`}
+            name="description"
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Upper body strength emphasis"
+            type="text"
+            value={description}
           />
         </div>
 
@@ -306,7 +355,14 @@ export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFor
       <label className="field-label" htmlFor={`deadline-${groupId}`}>
         Deadline
       </label>
-      <input className="field-input date-input" id={`deadline-${groupId}`} name="deadline" required type="date" />
+      <input
+        className="field-input date-input"
+        defaultValue={initialDeadline}
+        id={`deadline-${groupId}`}
+        name="deadline"
+        required
+        type="date"
+      />
 
       <div className="sub-block">
         <p className="field-label">Exercise Plan</p>
@@ -421,7 +477,7 @@ export function WorkoutPlanForm({ groupId, trainees, templates }: WorkoutPlanFor
       </div>
 
       <button className="primary-button" type="submit">
-        Assign Workout
+        {submitLabel}
       </button>
     </form>
   );

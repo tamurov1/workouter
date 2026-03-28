@@ -1,15 +1,8 @@
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { requireUser } from "@/lib/auth";
+import { formatDeadline, getMissedCutoff } from "@/lib/deadline";
 import { prisma } from "@/lib/prisma";
-
-function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(value);
-}
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-CA").format(value);
@@ -17,6 +10,7 @@ function formatNumber(value: number) {
 
 export default async function ArchivePage() {
   const user = await requireUser();
+  const missedCutoff = getMissedCutoff();
 
   if (!user.role) {
     redirect("/onboarding");
@@ -28,7 +22,7 @@ export default async function ArchivePage() {
         traineeId: user.id,
         isArchived: false,
         deadline: {
-          lt: new Date(),
+          lt: missedCutoff,
         },
       },
       data: {
@@ -43,7 +37,7 @@ export default async function ArchivePage() {
         trainerId: user.id,
         isArchived: false,
         deadline: {
-          lt: new Date(),
+          lt: missedCutoff,
         },
       },
       data: {
@@ -85,7 +79,7 @@ export default async function ArchivePage() {
               <article className="workout-card" key={workout.id}>
                 <h2 className="workout-title">{workout.title}</h2>
                 <p className="panel-copy">
-                  {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
+                  {workout.dayLabel} | Deadline: {formatDeadline(workout.deadline)} | Group: {workout.group.name}
                 </p>
                 <p className="profile-bio">Status: {workout.completions.length > 0 ? "Done" : "Not done"}</p>
                 <p className="profile-bio">
@@ -135,7 +129,7 @@ export default async function ArchivePage() {
               <article className="workout-card" key={workout.id}>
                 <h2 className="workout-title">{workout.title}</h2>
                 <p className="panel-copy">
-                  {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
+                  {workout.dayLabel} | Deadline: {formatDeadline(workout.deadline)} | Group: {workout.group.name}
                 </p>
                 <p className="profile-bio">Status: {workout.completions.length > 0 ? "Done" : "Not done"}</p>
                 <p className="profile-bio">

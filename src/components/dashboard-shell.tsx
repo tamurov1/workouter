@@ -7,22 +7,30 @@ type DashboardShellProps = {
   children: React.ReactNode;
 };
 
-const NAV_ITEMS = [
-  { href: "/search", label: "Search" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/profile", label: "Profile" },
-  { href: "/settings", label: "Settings" },
-];
-
 export async function DashboardShell({ children }: DashboardShellProps) {
   const user = await getCurrentUser();
+  const navItems = [
+    { href: "/profile", label: "Profile" },
+    { href: "/leaderboard", label: "Leaderboard" },
+    { href: "/groups", label: "Groups" },
+    { href: "/search", label: "Search" },
+    { href: "/archive", label: "Archive" },
+    { href: "/settings", label: "Settings" },
+  ];
 
   return (
     <main className="screen-shell app-shell">
       <aside className="panel side-rail">
-        <p className="eyebrow">Workouter</p>
+        <div className="side-rail-brand">
+          <p className="eyebrow">Workouter</p>
+          <h1 className="side-rail-title">Dashboard</h1>
+          <p className="panel-copy">
+            {user?.role === "TRAINER" ? "Manage trainees, workouts, and groups." : "Check workouts, progress, and profile."}
+          </p>
+        </div>
+
         <nav className="side-nav" aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <Link key={item.href} className="side-nav-item" href={item.href}>
               {item.label}
             </Link>

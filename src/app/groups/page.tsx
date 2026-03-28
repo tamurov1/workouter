@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
   createGroupAction,
   reviewJoinRequestAction,
@@ -105,6 +106,24 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                 <article className="workout-card" key={group.id}>
                   <h2 className="workout-title">{group.name}</h2>
                   <p className="profile-bio">{group.description || "No description"}</p>
+
+                  <div className="sub-block">
+                    <p className="field-label">Trainees</p>
+                    {trainees.length ? (
+                      <div className="member-list">
+                        {trainees.map((trainee) => (
+                          <div className="member-row" key={trainee.id}>
+                            <p className="panel-copy">{trainee.name}</p>
+                            <Link className="secondary-button text-center" href={`/profile/${trainee.id}`}>
+                              Open Profile
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="panel-copy">No trainees in this group yet.</p>
+                    )}
+                  </div>
 
                   <div className="sub-block">
                     <p className="field-label">Join Requests</p>

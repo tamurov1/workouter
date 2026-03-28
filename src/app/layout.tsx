@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sora, Space_Mono } from "next/font/google";
+import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
 const sora = Sora({
@@ -24,10 +25,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html data-theme="dark" lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (() => {
+                const key = "workouter-theme";
+                const stored = window.localStorage.getItem(key);
+                const preferred = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+                const theme = stored === "light" || stored === "dark" ? stored : preferred;
+                document.documentElement.dataset.theme = theme;
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${sora.variable} ${spaceMono.variable} antialiased`}
       >
+        <ThemeToggle />
         {children}
       </body>
     </html>

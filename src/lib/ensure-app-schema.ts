@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS "public"."GroupJoinRequest" (
 CREATE TABLE IF NOT EXISTS "public"."Workout" (
   "id" TEXT NOT NULL,
   "title" TEXT NOT NULL,
+  "description" TEXT NOT NULL DEFAULT '',
   "dayLabel" TEXT NOT NULL,
   "deadline" TIMESTAMP(3) NOT NULL,
   "isArchived" BOOLEAN NOT NULL DEFAULT false,
@@ -103,6 +104,7 @@ CREATE TABLE IF NOT EXISTS "public"."WorkoutTemplate" (
   "id" TEXT NOT NULL,
   "name" TEXT NOT NULL,
   "title" TEXT NOT NULL,
+  "description" TEXT NOT NULL DEFAULT '',
   "dayLabel" TEXT NOT NULL,
   "trainerId" TEXT NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -150,6 +152,16 @@ CREATE TABLE IF NOT EXISTS "public"."WorkoutTemplateExercise" (
   for (const sql of indexes) {
     await prisma.$executeRawUnsafe(sql);
   }
+
+  await prisma.$executeRawUnsafe(`
+ALTER TABLE "public"."Workout"
+ADD COLUMN IF NOT EXISTS "description" TEXT NOT NULL DEFAULT '';
+  `);
+
+  await prisma.$executeRawUnsafe(`
+ALTER TABLE "public"."WorkoutTemplate"
+ADD COLUMN IF NOT EXISTS "description" TEXT NOT NULL DEFAULT '';
+  `);
 
   const constraints = [
     {

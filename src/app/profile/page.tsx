@@ -1,16 +1,15 @@
 import { redirect } from "next/navigation";
-import { completeExerciseSetAction, resetExerciseSetAction } from "@/app/actions";
+import Link from "next/link";
+import { resetExerciseSetAction } from "@/app/actions";
+import { CommitmentMap } from "@/components/commitment-map";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { ExpandableExerciseCard } from "@/components/expandable-exercise-card";
+import { ExpandableWorkoutCard } from "@/components/expandable-workout-card";
+import { ExerciseRpeForm } from "@/components/exercise-rpe-form";
 import { requireUser } from "@/lib/auth";
+import { formatDeadline, getMissedCutoff } from "@/lib/deadline";
 import { prisma } from "@/lib/prisma";
-
-function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(value);
-}
+import { getTrainerLeaderboardPoints } from "@/lib/trainer-points";
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-CA").format(value);
@@ -22,6 +21,7 @@ type ProfilePageProps = {
 
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const user = await requireUser();
+  const missedCutoff = getMissedCutoff();
 
   if (!user.role) {
     redirect("/onboarding");
@@ -33,7 +33,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         traineeId: user.id,
         isArchived: false,
         deadline: {
-          lt: new Date(),
+          lt: missedCutoff,
         },
       },
       data: {
@@ -48,7 +48,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         trainerId: user.id,
         isArchived: false,
         deadline: {
-          lt: new Date(),
+          lt: missedCutoff,
         },
       },
       data: {
@@ -83,6 +83,27 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         })
       : [];
 
+  const traineeCommitments =
+    user.role === "TRAINEE"
+      ? await prisma.workout.findMany({
+          where: {
+            traineeId: user.id,
+            deadline: {
+              gte: new Date(new Date().getFullYear(), 0, 1),
+              lt: new Date(new Date().getFullYear() + 1, 0, 1),
+            },
+          },
+          select: {
+            deadline: true,
+            completions: {
+              where: { userId: user.id },
+              select: { id: true },
+            },
+          },
+          orderBy: { deadline: "asc" },
+        })
+      : [];
+
   const trainerWorkouts =
     user.role === "TRAINER"
       ? await prisma.workout.findMany({
@@ -93,6 +114,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           include: {
             trainee: {
               select: {
+                id: true,
                 name: true,
               },
             },
@@ -113,35 +135,72 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         })
       : [];
 
+  const trainerPoints =
+    user.role === "TRAINER"
+      ? getTrainerLeaderboardPoints(
+          await prisma.user.findUniqueOrThrow({
+            where: { id: user.id },
+            select: {
+              trainedGroups: {
+                select: {
+                  memberships: {
+                    select: {
+                      user: {
+                        select: {
+                          id: true,
+                          role: true,
+                          points: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          }),
+        )
+      : user.points;
+
   return (
     <DashboardShell>
       <section className="panel profile-panel compact-profile">
         <p className="eyebrow">Profile</p>
         <div className="profile-summary-row">
-          <div className="avatar-shell small-avatar">
-            {user.avatarData ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img alt={`${user.name} avatar`} className="h-full w-full object-cover" src={user.avatarData} />
-            ) : (
-              <span className="text-[10px] uppercase tracking-[0.18em] text-[#6f747a]">No image</span>
-            )}
+          <div className="profile-summary-main">
+            <div className="avatar-shell small-avatar">
+              {user.avatarData ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt={`${user.name} avatar`} className="h-full w-full object-cover" src={user.avatarData} />
+              ) : (
+                <span className="text-[10px] uppercase tracking-[0.18em] text-[#6f747a]">No image</span>
+              )}
+            </div>
+
+            <div>
+              <h1 className="profile-name">{user.name}</h1>
+              <p className="profile-bio">{user.bio || "No bio added yet."}</p>
+              <p className="profile-role">{user.role === "TRAINEE" ? "Trainee" : "Trainer"}</p>
+            </div>
           </div>
 
-          <div>
-            <h1 className="profile-name">{user.name}</h1>
-            <p className="profile-bio">{user.bio || "No bio added yet."}</p>
-            <p className="profile-role">{user.role === "TRAINEE" ? "Trainee" : "Trainer"}</p>
+          <div className="profile-points-block">
+            <p className="eyebrow">Points</p>
+            <div className="points-inline-value">{trainerPoints}</div>
           </div>
-        </div>
-
-        <div className="points-inline">
-          <p className="eyebrow">Points</p>
-          <div className="points-inline-value">{user.points}</div>
         </div>
 
         {params.error ? <p className="status-error">{decodeURIComponent(params.error)}</p> : null}
         {params.saved ? <p className="status-success">Set updated.</p> : null}
       </section>
+
+      {user.role === "TRAINEE" ? (
+        <CommitmentMap
+          items={traineeCommitments.map((workout) => ({
+            deadline: workout.deadline,
+            isDone: workout.completions.length > 0,
+          }))}
+        />
+      ) : null}
 
       <section className="panel workout-panel">
         <div className="workout-head">
@@ -177,15 +236,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 }, []);
 
                 return (
-                  <article className="workout-card" key={workout.id}>
-                    <div className="workout-meta-line">
-                      <h2 className="workout-title">{workout.title}</h2>
-                      <span className="workout-status">{done ? "Done" : "Not done"}</span>
-                    </div>
-                    <p className="panel-copy">
-                      {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Group: {workout.group.name}
-                    </p>
-                    <p className="profile-bio">Status: {done ? "Done" : "Not done"}</p>
+                  <ExpandableWorkoutCard
+                    key={workout.id}
+                    deadline={formatDeadline(workout.deadline)}
+                    description={workout.description}
+                    group={workout.group.name}
+                    status={done ? "Done" : "Not done"}
+                    title={workout.title}
+                  >
                     <p className="profile-bio">Total volume: {formatNumber(totalVolume)}</p>
                     <p className="profile-bio">
                       Enter actual RPE once per set. Next set load updates automatically from that value.
@@ -193,8 +251,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
                     <div className="exercise-group-list">
                       {exerciseGroups.map((group) => (
-                        <section className="exercise-group-card" key={`${workout.id}-${group.name}`}>
-                          <h3 className="exercise-group-title">{group.name}</h3>
+                        <ExpandableExerciseCard
+                          key={`${workout.id}-${group.name}`}
+                          subtitle={`${group.rows.length} sets`}
+                          title={group.name}
+                        >
                           <div className="exercise-table-wrap">
                             <table className="exercise-table">
                               <thead>
@@ -222,21 +283,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                                       {exercise.isCompleted ? (
                                         exercise.actualRpe?.toFixed(1)
                                       ) : (
-                                        <form action={completeExerciseSetAction} className="exercise-inline-form">
-                                          <input name="exerciseId" type="hidden" value={exercise.id} />
-                                          <input
-                                            className="mini-input"
-                                            defaultValue={exercise.rpe.toFixed(1)}
-                                            max={10}
-                                            min={6}
-                                            name="actualRpe"
-                                            step="0.5"
-                                            type="number"
-                                          />
-                                          <button className="mini-check" type="submit">
-                                            Save
-                                          </button>
-                                        </form>
+                                        <ExerciseRpeForm
+                                          defaultValue={exercise.rpe.toFixed(1)}
+                                          exerciseId={exercise.id}
+                                        />
                                       )}
                                     </td>
                                     <td>{exercise.intensity ? exercise.intensity.toFixed(1) : "-"}</td>
@@ -258,10 +308,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                               </tbody>
                             </table>
                           </div>
-                        </section>
+                        </ExpandableExerciseCard>
                       ))}
                     </div>
-                  </article>
+                  </ExpandableWorkoutCard>
                 );
               })
             ) : (
@@ -276,18 +326,22 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 const totalVolume = workout.exercises.reduce((sum, exercise) => sum + exercise.volume, 0);
 
                 return (
-                  <article className="workout-card" key={workout.id}>
-                    <div className="workout-meta-line">
-                      <h2 className="workout-title">{workout.title}</h2>
-                      <span className="workout-status">{done ? "Done" : "Not done"}</span>
-                    </div>
-                    <p className="panel-copy">
-                      {workout.dayLabel} | Deadline: {formatDate(workout.deadline)} | Trainee: {workout.trainee.name}
-                    </p>
-                    <p className="profile-bio">Status: {done ? "Done" : "Not done"}</p>
+                  <ExpandableWorkoutCard
+                    key={workout.id}
+                    deadline={formatDeadline(workout.deadline)}
+                    description={workout.description}
+                    group={workout.group.name}
+                    status={done ? "Done" : "Not done"}
+                    title={workout.title}
+                  >
                     <p className="profile-bio">Total volume: {formatNumber(totalVolume)}</p>
-                    <p className="profile-bio">Group: {workout.group.name}</p>
-                  </article>
+                    <p className="profile-bio">Trainee: {workout.trainee.name}</p>
+                    <div className="card-actions">
+                      <Link className="secondary-button text-center" href={`/profile/${workout.trainee.id}`}>
+                        Open Trainee Profile
+                      </Link>
+                    </div>
+                  </ExpandableWorkoutCard>
                 );
               })
             ) : (

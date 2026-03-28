@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS "GroupJoinRequest" (
 CREATE TABLE IF NOT EXISTS "Workout" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "title" TEXT NOT NULL,
+  "description" TEXT NOT NULL DEFAULT '',
   "dayLabel" TEXT NOT NULL,
   "deadline" DATETIME NOT NULL,
   "isArchived" BOOLEAN NOT NULL DEFAULT 0,
